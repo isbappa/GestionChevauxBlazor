@@ -1,0 +1,219 @@
+﻿@page "/reprises"
+@attribute [Authorize(Roles = "SuperAdmin, Admin, Cavalier")]
+
+@using GestionChevauxBlazor.Services;
+@using GestionChevauxBlazor.Models;
+@inject IAjoutProgrammeService ajoutProgrammeService
+@inject IValidationProgrammeService validationProgrammeService
+@inject IJSRuntime jsRuntime
+@using Microsoft.AspNetCore.Authorization;
+@using Microsoft.AspNetCore.Identity;
+@inject UserManager<ApplicationUser> _UserManager
+@inject RoleManager<IdentityRole> _RoleManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using System.Security.Claims;
+@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor _httpContextAccessor
+
+<h1>Sélectionnez un créneau horaire</h1>
+<p>Consultez nos horaires de cours et réservez le temps qui vous convient le mieux</p>
+
+<AuthorizeView>
+    <Authorized>
+        @*@if (@context.User.IsInRole(ADMINISTRATION_ROLE))
+            {*@
+        @if (programsList == null)
+        {
+            <p><em>Chargement...</em></p>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Prénom Moniteur</th>
+                        <th>Nom Moniteur</th>
+                        <th>Date</th>
+                        <th>Heure</th>
+                        <th>Réserver</th>
+                        @*<th>Supprimer</th>*@
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var programsListItem in programsList)
+                    {
+                        <tr>
+                            @*@foreach (var user in ColUsers)
+                                {
+                                    @if (user.Id == taskObject.MonitorId)
+                                    {
+                                        <td>@user.FirstName</td>
+                                        <td>@user.LastName</td>
+                                    }
+                                }*@
+                            @if (programsListItem.Available == true)
+                            {
+                                <td>@programsListItem.MonitorFisrtname</td>
+                                <td>@programsListItem.MonitorLastname</td>
+                                <td>@programsListItem.Date.ToString("dd/MM/yyyy")</td>
+                                <td>@programsListItem.Time.ToString("H:mm")</td>
+
+                                <td><input type="button" class="btn btn-primary" @onclick="(() => PrepareForEdit(programsListItem))" data-toggle="modal" data-target="#taskModal" value="Réserver" /></td>
+
+                            }
+
+                            @*<td><input type="button" class="btn btn-danger" @onclick="(() => PrepareForDelete(programsListItem))" data-toggle="modal" data-target="#confirmDeleteModal" value="Supprimer" /></td>*@
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        @*<div>
+                <input type="button" data-toggle="modal" data-target="#taskModal" class="btn btn-primary" value="Ajouter un programme" @onclick="(() => InitializeTaskObject())" />
+            </div>*@
+        @*}*@
+        @*<h2><button class="btn btn-success" @onclick="AddNewUser">Ajouter un Cheval</button></h2>*@
+        @*}
+            else
+            {
+            <p>You're not signed in as a user in @ADMINISTRATION_ROLE.</p>
+            }*@
+    </Authorized>
+    <NotAuthorized>
+        <p>You're not loggged in.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+
+<ConfirmDialogReprises OnClick="@Delete" />
+<ReprisesDetail TaskObject=taskObject DataChanged="@DataChanged">
+    <CustomHeader>@customHeader</CustomHeader>
+</ReprisesDetail>
+
+@code {
+
+    List<AjoutPlanningReprisesModel> programsList;
+    List<ValidationPlanningRepriseModel> programsList_v;
+    List<AjoutPlanningReprisesModel> ColprogramsList;
+    AjoutPlanningReprisesModel taskObject = new AjoutPlanningReprisesModel();
+    ValidationPlanningRepriseModel taskObjectValidation = new ValidationPlanningRepriseModel();
+    string customHeader = string.Empty;
+    public string GetMonitorID;
+    public string RiderID;
+    public int ProgramID;
+    public string RiderFisrtname;
+    public string RiderLastname;
+    public string MonitorID;
+    public string MonitorFisrtname;
+    public string MonitorLastname;
+    public DateTime ProgramDate;
+    public DateTime ProgramTime;
+    public Boolean ProgramAvailable;
+
+    // To hold any possible errors
+    string strError = "";
+    // Collection to display the existing users
+    List<ApplicationUser> ColUsers = new List<ApplicationUser>();
+    //List<IdentityRole> ColRoles = new List<IdentityRole>();
+    List<IdentityRole> ColRoles = new List<IdentityRole>();
+    List<ApplicationUser> roles = new List<ApplicationUser>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        programsList = await ajoutProgrammeService.Get();
+        programsList_v = await validationProgrammeService.Get();
+        GetMonitorID = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+    }
+
+    private void InitializeTaskObject()
+    {
+        taskObject = new AjoutPlanningReprisesModel();
+        customHeader = "Réserver un programme";
+    }
+
+    private async void DataChanged()
+    {
+        programsList = await ajoutProgrammeService.Get();
+        StateHasChanged();
+    }
+
+    private async void PrepareForEdit(AjoutPlanningReprisesModel task)
+    {
+        //
+        GetUsers();
+
+        customHeader = "Réservation éffectuée avec SUCCES";
+        taskObject = task;
+        taskObject.Available = false;
+        MonitorID = task.MonitorId;
+        MonitorFisrtname = task.MonitorFisrtname;
+        MonitorLastname = task.MonitorLastname;
+        ProgramDate = task.Date;
+        ProgramTime = task.Time;
+        ProgramAvailable = task.Available;
+        ProgramID = task.IdProgram;
+        task = await ajoutProgrammeService.Update(taskObject);
+        programsList = await ajoutProgrammeService.Get();
+        taskObject = new AjoutPlanningReprisesModel();
+
+        //
+        FillValidationTable();
+        StateHasChanged();        
+
+    }
+    private async void FillValidationTable()
+    {
+        taskObjectValidation.MonitorID_v = MonitorID;
+        taskObjectValidation.MonitorFirstname_v = MonitorFisrtname;
+        taskObjectValidation.MonitorLastname_v = MonitorLastname;
+        taskObjectValidation.Date_v = ProgramDate;
+        taskObjectValidation.Time_v = ProgramTime;
+        taskObjectValidation.Available_v = ProgramAvailable;
+        taskObjectValidation.RiderID_v = RiderID;
+        taskObjectValidation.RiderFirstname_v = RiderFisrtname;
+        taskObjectValidation.RiderLastname_v = RiderLastname;
+        taskObjectValidation.ProgramID_v = ProgramID;
+
+        await validationProgrammeService.Add(taskObjectValidation);
+        taskObjectValidation = new ValidationPlanningRepriseModel();
+
+    }
+
+    private void PrepareForDelete(AjoutPlanningReprisesModel task)
+    {
+        taskObject = task;
+    }
+
+    private async Task Delete()
+    {
+        var task = await ajoutProgrammeService.Delete(taskObject.IdProgram);
+        await jsRuntime.InvokeAsync<object>("CloseModal", "confirmDeleteModal");
+        programsList = await ajoutProgrammeService.Get();
+        taskObject = new AjoutPlanningReprisesModel();
+    }
+
+    public void GetUsers()
+    {
+
+        // get users from _UserManager
+        var user = _UserManager.Users.Select(x => new ApplicationUser
+        {
+            Id = x.Id,
+            FirstName = x.FirstName,
+            LastName = x.LastName,
+
+        });
+        foreach (var item in user)
+        {
+            if (item.Id == GetMonitorID)
+            {
+                RiderFisrtname = item.FirstName;
+                RiderLastname = item.LastName;
+                RiderID = item.Id;
+            }
+        }
+
+    }
+
+}
+

@@ -1,0 +1,94 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@inject IAuthorizationService AuthorizationService
+
+<div class="top-row pl-4 navbar navbar-dark">
+    <a class="navbar-brand" href="">Gestion Chevaux</a>
+    <button class="navbar-toggler" @onclick="ToggleNavMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+</div>
+
+<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+    <ul class="nav flex-column">
+        <li class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="oi oi-home" aria-hidden="true"></span> Accueil
+            </NavLink>
+        </li>
+        <AuthorizeView Roles="SuperAdmin, Admin, Moniteur, Cavalier">
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="Identity/Account/Manage">
+                    <span class="oi oi-person" aria-hidden="true"></span> Gestion Compte
+                </NavLink>
+            </li>
+            @*<li class="nav-item px-3">
+                <NavLink class="nav-link" href="gestioncompte">
+                    <span class="oi oi-person" aria-hidden="true"></span> Gestion Compte
+                </NavLink>
+            </li>*@
+        </AuthorizeView>
+        <AuthorizeView Roles="SuperAdmin, Cavalier">
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="reprises">
+                    <span class="oi oi-plus" aria-hidden="true"></span> Reprises
+                </NavLink>
+            </li>
+        </AuthorizeView>
+        <AuthorizeView Roles="SuperAdmin, Cavalier">
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="mescours">
+                    <span class="oi oi-info" aria-hidden="true"></span> Mes cours
+                </NavLink>
+            </li>
+        </AuthorizeView>
+        <AuthorizeView Roles="SuperAdmin">
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="gestionutilisateurs">
+                    <span class="oi oi-dashboard" aria-hidden="true"></span> Gestion Utilisateurs
+                </NavLink>
+            </li>
+        </AuthorizeView>
+        <AuthorizeView Roles="SuperAdmin, Moniteur">
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="gestionchevaux">
+                    <span class="oi oi-task" aria-hidden="true"></span> Gestion Chevaux
+                </NavLink>
+            </li>
+        </AuthorizeView>
+        <AuthorizeView Roles="SuperAdmin, Moniteur">
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="planningreprises">
+                    <span class="oi oi-calendar" aria-hidden="true"></span> Planning Reprises
+                </NavLink>
+            </li>
+        </AuthorizeView>
+        <AuthorizeView Roles="SuperAdmin, Moniteur">
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="validationreprise">
+                    <span class="oi oi-spreadsheet" aria-hidden="true"></span> Validation Reprises
+                </NavLink>
+            </li>
+        </AuthorizeView>
+
+        <AuthorizeView>
+            <Authorizing>
+                <h1>Authentification en cours</h1>
+                <p>Vous ne pouvez voir ce contenu que pendant l'authentification.</p>
+            </Authorizing>
+        </AuthorizeView>
+
+
+
+    </ul>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}

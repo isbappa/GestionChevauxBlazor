@@ -1,0 +1,160 @@
+﻿
+@attribute [Authorize(Roles = "SuperAdmin, Admin, Cavalier")]
+
+@using GestionChevauxBlazor.Services;
+@using GestionChevauxBlazor.Models;
+@inject IAjoutProgrammeService ajoutProgrammeService
+@inject IJSRuntime jsRuntime
+@using Microsoft.AspNetCore.Authorization;
+@using Microsoft.AspNetCore.Identity;
+@inject UserManager<ApplicationUser> _UserManager
+@using Microsoft.AspNetCore.Http
+@using System.Security.Claims;
+@inject IHttpContextAccessor _httpContextAccessor
+@inject IAjoutChevauxService ajoutChevauxService
+@inject IValidationProgrammeService validationProgrammeService
+
+
+<div class="modal" tabindex="-1" role="dialog" id="taskModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@CustomHeader</h5>                
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="@TaskObject_v" OnValidSubmit="@HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    @*<ValidationSummary />*@
+                    @*<div class="form-group">
+            <p>ID Moniteur : @GetMonitorID</p>
+        </div>*@
+
+                    <div class="form-group">
+                        <label for="taskName">Nom du cheval à assigner pour le cours</label>
+                        @* <select class="form-control" @bind="@CurrentUserRole">   *@
+                        @if (chevauxList == null)
+                        {
+                            <p><em>Chargement...</em></p>
+                        }
+                        else
+                        {                            
+                                <select class="form-control" @bind="@TaskObject_v.HorseName_v">
+                                    @foreach (var option in chevauxList)
+                                    {
+                                        @if (option.Available == true)
+                                        {
+                                            <option selected="@option.HorseName" value="@option.HorseName">
+                                                @option.HorseName
+                                            </option>
+                                        }
+                                    }
+                                </select>                                                         
+
+                        }
+                        @*<ValidationMessage For="@(() => @TaskObject.Date)" />*@
+                    </div>                   
+
+                    @* @onclick="(() => PrepareForEdit(option))" (TaskObject_v.IdCheval_v == 0) (TaskObject_v.HorseName_v != null) && (TaskObject_v.IdCheval_v == 0)*@
+                    @* (((TaskObject_v.IdCheval_v == 0) && (TaskObject_v.HorseName_v == "NULL")) || (TaskObject_v.Available_v == false)) *@
+                    
+                        <button type="submit" class="btn btn-primary">Valider</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>
+                        @*<button type="button" class="btn btn-info" data-dismiss="modal">Quitter</button>*@
+                    
+                    <!--else
+                    {-->
+                        @*<button type="submit" class="btn btn-primary">Valider</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>*@
+                        <!--<button type="button" class="btn btn-info" data-dismiss="modal">Quitter</button>
+                    }-->
+
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+@code {
+    [Parameter]
+    public AjoutPlanningReprisesModel TaskObject { get; set; }
+
+    [Parameter]
+    public ValidationPlanningRepriseModel TaskObject_v { get; set; }
+
+    [Parameter]
+    public Action DataChanged { get; set; }
+
+    [Parameter]
+    public RenderFragment CustomHeader { get; set; }
+
+    [Parameter]
+    public RenderFragment customHeaderIdValidation { get; set; }
+
+    // Collection to display the existing users
+    ApplicationUser objUser = new ApplicationUser();
+
+    public string GetMonitorID;
+    public string MonitorFisrtname;
+    public string MonitorLastname;
+    public string Name { get; set; }
+
+    List<AjoutChevauxModel> chevauxList;
+    //List<AjoutChevauxModel> chevauxListSelected;
+    AjoutChevauxModel chevauxListSelected = new AjoutChevauxModel();
+    public string GetHorseName;
+    public int GetHorseId;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        chevauxList = await ajoutChevauxService.Get();
+        //GetMonitorID = _httpContextAccessor.HttpContext.User.Identity.Name;
+        GetMonitorID = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        //Horses();
+        //     var1 =
+        //    _httpContextAccessor.HttpContext.User.Identity.IsAuthenticated ?
+        //_httpContextAccessor.HttpContext.User.Claims.Where(c => c.Type == ClaimTypes.NameIdentifier).First().Value
+        //: Guid.Empty.ToString();
+        //     var2 = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);        
+
+    }
+
+    private async Task CloseTaskModal()
+    {
+        await jsRuntime.InvokeAsync<object>("CloseModal", "taskModal");
+        chevauxList = await ajoutChevauxService.Get();
+    }
+
+    private async void HandleValidSubmit()
+    {
+
+        if (TaskObject_v.IdCheval_v == null)
+        {
+            TaskObject_v.Available_v = true;
+            TaskObject_v.IdCheval_v = chevauxListSelected.IdCheval;
+            TaskObject_v.HorseName_v = chevauxListSelected.HorseName;
+            await validationProgrammeService.Update(TaskObject_v);
+        }
+        else
+        {
+            TaskObject_v.Available_v = true;
+            await validationProgrammeService.Update(TaskObject_v);
+        }
+        await CloseTaskModal();
+        DataChanged?.Invoke();
+    }
+
+
+    private async void PrepareForEdit(AjoutPlanningReprisesModel task)
+    {
+
+        StateHasChanged();
+
+    }
+
+}

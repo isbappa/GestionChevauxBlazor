@@ -1,0 +1,151 @@
+﻿
+@attribute [Authorize(Roles = "SuperAdmin, Admin, Cavalier")]
+
+@using GestionChevauxBlazor.Services;
+@using GestionChevauxBlazor.Models;
+@inject IAjoutProgrammeService ajoutProgrammeService
+@inject IJSRuntime jsRuntime
+@using Microsoft.AspNetCore.Authorization;
+@using Microsoft.AspNetCore.Identity;
+@inject UserManager<ApplicationUser> _UserManager
+@using Microsoft.AspNetCore.Http
+@using System.Security.Claims;
+@inject IHttpContextAccessor _httpContextAccessor
+
+
+
+<div class="modal" tabindex="-1" role="dialog" id="taskModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@CustomHeader</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="@TaskObject" OnValidSubmit="@HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    @*<ValidationSummary />*@
+
+                    @*<p class="btn btn-primary">Réservation éffectuée avec SUCCES</p>*@
+                    <div class="form-group">
+                        <p class="btn btn-primary">BONNE SEANCE...</p>
+                    </div>
+
+                    <!--<div class="form-group">
+                        <p>ID Moniteur : @GetMonitorID</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="taskName">Date </label>
+                        <input type="hidden" @bind-value="@TaskObject.IdProgram" />
+                        <input type="date" @bind="@TaskObject.Date" format="dd MM yyyy" min=@DateTime.Now.ToString("yyyy-MM-dd") />-->
+                        @*<InputDate @bind-Value:culture="fr-FR" id="date" @bind-Value="@TaskObject.Date" />*@
+                        @*<input id="txtDate" type="date"  @bind-value="@TaskObject.Date" />*@
+                        <!--<ValidationMessage For="@(() => @TaskObject.Date)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="taskName">Heure</label>-->
+                        @*<input id="txtTime" type="time" @bind-value="@TaskObject.Time" /> @bind:format="HH:mm"*@
+                        <!--<input type="time" @bind="@TaskObject.Time" />
+                        <ValidationMessage For="@(() => @TaskObject.Time)" />
+                    </div>
+
+
+                    <button type="submit" class="btn btn-primary">Valider</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Annuler</button>-->
+                    <button type="button" class="btn btn-info" data-dismiss="modal">Quitter</button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+@code {
+    [Parameter]
+    public AjoutPlanningReprisesModel TaskObject { get; set; }
+
+    [Parameter]
+    public Action DataChanged { get; set; }
+
+    [Parameter]
+    public RenderFragment CustomHeader { get; set; }
+
+    // Collection to display the existing users
+    ApplicationUser objUser = new ApplicationUser();
+
+    public string GetMonitorID;
+    public string MonitorFisrtname;
+    public string MonitorLastname;
+    public string Name { get; set; }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        //GetMonitorID = _httpContextAccessor.HttpContext.User.Identity.Name;
+        GetMonitorID = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        //     var1 =
+        //    _httpContextAccessor.HttpContext.User.Identity.IsAuthenticated ?
+        //_httpContextAccessor.HttpContext.User.Claims.Where(c => c.Type == ClaimTypes.NameIdentifier).First().Value
+        //: Guid.Empty.ToString();
+        //     var2 = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);        
+
+    }
+
+    private async Task CloseTaskModal()
+    {
+        await jsRuntime.InvokeAsync<object>("CloseModal", "taskModal");
+    }
+
+    private async void HandleValidSubmit()
+    {
+        //
+        GetUsers();
+
+        TaskObject.MonitorId = GetMonitorID;        
+        if (TaskObject.MonitorId != null)
+        {
+            //TaskObject.Available = false;
+            TaskObject.MonitorFisrtname = MonitorFisrtname;
+            TaskObject.MonitorLastname = MonitorLastname;
+        }
+        if (TaskObject.IdProgram == 0)
+        {
+            await ajoutProgrammeService.Add(TaskObject);
+        }
+        else
+        {
+            await ajoutProgrammeService.Update(TaskObject);
+        }
+        await CloseTaskModal();
+        DataChanged?.Invoke();
+    }
+
+    public void GetUsers()
+    {
+
+        // get users from _UserManager
+        var user = _UserManager.Users.Select(x => new ApplicationUser
+        {
+            Id = x.Id,
+            FirstName = x.FirstName,
+            LastName = x.LastName,
+
+        });
+        foreach (var item in user)
+        {
+            if (item.Id == GetMonitorID)
+            {
+                MonitorFisrtname = item.FirstName;
+                MonitorLastname = item.LastName;
+            }
+        }
+
+    }
+
+}

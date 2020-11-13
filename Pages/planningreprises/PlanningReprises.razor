@@ -1,0 +1,129 @@
+﻿@page "/planningreprises"
+@attribute [Authorize(Roles = "SuperAdmin, Admin, Moniteur")]
+
+@using GestionChevauxBlazor.Services;
+@using GestionChevauxBlazor.Models;
+@inject IAjoutProgrammeService ajoutProgrammeService
+@inject IJSRuntime jsRuntime
+@using Microsoft.AspNetCore.Http
+@using System.Security.Claims;
+@inject IHttpContextAccessor _httpContextAccessor
+
+
+<h1>Liste des programmes pour les cours</h1>
+
+<AuthorizeView>
+    <Authorized>
+        @*@if (@context.User.IsInRole(ADMINISTRATION_ROLE))
+            {*@
+        @if (programsList == null)
+        {
+            <p><em>Chargement...</em></p>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Heure</th>
+                        <th>Disponible</th>
+                        <th>Modifier</th>
+                        <th>Supprimer</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var programsListItem in programsList)
+                    {
+                        <tr>
+
+                            @if (programsListItem.MonitorId == GetMonitorID)
+                            {
+                                <td>@programsListItem.Date.ToString("dd/MM/yyyy")</td>
+                                <td>@programsListItem.Time.ToString("H:mm")</td>
+
+                                @if (programsListItem.Available == true)
+                                {
+                                    <td>Oui</td>
+                                }
+                                else
+                                {
+                                    <td>Non</td>
+                                }
+
+                                <td><input type="button" class="btn btn-primary" @onclick="(() => PrepareForEdit(programsListItem))" data-toggle="modal" data-target="#taskModal" value="Modifier" /></td>
+                                <td><input type="button" class="btn btn-danger" @onclick="(() => PrepareForDelete(programsListItem))" data-toggle="modal" data-target="#confirmDeleteModal" value="Supprimer" /></td>
+                            }
+
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        <div>
+            <input type="button" data-toggle="modal" data-target="#taskModal" class="btn btn-primary" value="Ajouter un programme" @onclick="(() => InitializeTaskObject())" />
+        </div>
+        @*}*@
+        @*<h2><button class="btn btn-success" @onclick="AddNewUser">Ajouter un Cheval</button></h2>*@
+        @*}
+            else
+            {
+            <p>You're not signed in as a user in @ADMINISTRATION_ROLE.</p>
+            }*@
+    </Authorized>
+    <NotAuthorized>
+        <p>You're not loggged in.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+
+<ConfirmDialogPlanningReprises OnClick="@Delete" />
+<PlanningReprisesDetail TaskObject=taskObject DataChanged="@DataChanged">
+    <CustomHeader>@customHeader</CustomHeader>
+</PlanningReprisesDetail>
+
+@code {
+
+    List<AjoutPlanningReprisesModel> programsList;
+    AjoutPlanningReprisesModel taskObject = new AjoutPlanningReprisesModel();
+    string customHeader = string.Empty;
+    public string GetMonitorID;
+
+    protected override async Task OnInitializedAsync()
+    {
+        programsList = await ajoutProgrammeService.Get();
+        GetMonitorID = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+    }
+
+    private void InitializeTaskObject()
+    {
+        taskObject = new AjoutPlanningReprisesModel();
+        customHeader = "Ajouter un programme";
+    }
+
+    private async void DataChanged()
+    {
+        programsList = await ajoutProgrammeService.Get();
+        StateHasChanged();
+    }
+
+    private void PrepareForEdit(AjoutPlanningReprisesModel task)
+    {
+        customHeader = "Modifier le programme";
+        taskObject = task;
+    }
+
+    private void PrepareForDelete(AjoutPlanningReprisesModel task)
+    {
+        taskObject = task;
+    }
+
+    private async Task Delete()
+    {
+        var task = await ajoutProgrammeService.Delete(taskObject.IdProgram);
+        await jsRuntime.InvokeAsync<object>("CloseModal", "confirmDeleteModal");
+        programsList = await ajoutProgrammeService.Get();
+        taskObject = new AjoutPlanningReprisesModel();
+    }
+}
+

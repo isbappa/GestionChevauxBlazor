@@ -1,0 +1,19 @@
+﻿@inherits LayoutComponentBase
+
+<div class="sidebar">
+    <NavMenu />
+</div>
+
+<div class="main">
+    <div class="top-row px-4 auth">
+        <LoginDisplay />
+        @*<a href="https://learning.esiea.fr" target="_blank">En savoir plus</a>*@
+        <NavLink class="nav-link" href="ensavoirplus">
+            <span class="oi oi-info" aria-hidden="true"></span> En savoir plus
+        </NavLink>
+    </div>
+
+    <div class="content px-4">
+        @Body
+    </div>
+</div>

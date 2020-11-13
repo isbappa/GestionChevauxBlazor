@@ -1,0 +1,118 @@
+﻿@page "/mescours"
+@attribute [Authorize(Roles = "SuperAdmin, Admin, Cavalier")]
+
+@using GestionChevauxBlazor.Services;
+@using GestionChevauxBlazor.Models;
+@inject IAjoutProgrammeService ajoutProgrammeService
+@inject IValidationProgrammeService validationProgrammeService
+@inject IJSRuntime jsRuntime
+@using Microsoft.AspNetCore.Authorization;
+@using Microsoft.AspNetCore.Identity;
+@inject UserManager<ApplicationUser> _UserManager
+@inject RoleManager<IdentityRole> _RoleManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using System.Security.Claims;
+@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor _httpContextAccessor
+
+<h1>Mes cours avec le Moniteur</h1>
+<p>Très bonne séance...</p>
+
+<AuthorizeView>
+    <Authorized>
+        @*@if (@context.User.IsInRole(ADMINISTRATION_ROLE))
+            {*@
+        @if (programsList == null)
+        {
+            <p><em>Chargement...</em></p>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Prénom Moniteur</th>
+                        <th>Nom Moniteur</th>
+                        <th>Date</th>
+                        <th>Heure</th>
+                        <th>Nom Cheval</th>
+                        @*<th>Supprimer</th>*@
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var programsListItem in programsList_v)
+                    {
+                        <tr>
+                            @*@foreach (var user in ColUsers)
+                                {
+                                    @if (user.Id == taskObject.MonitorId)
+                                    {
+                                        <td>@user.FirstName</td>
+                                        <td>@user.LastName</td>
+                                    }
+                                }*@
+                            @if ((programsListItem.Available_v == true) && (GetMonitorID == programsListItem.RiderID_v))
+                            {
+                                <td>@programsListItem.MonitorFirstname_v</td>
+                                <td>@programsListItem.MonitorLastname_v</td>
+                                <td>@programsListItem.Date_v.ToString("dd/MM/yyyy")</td>
+                                <td>@programsListItem.Time_v.ToString("H:mm")</td>
+                                <td>@programsListItem.HorseName_v</td>                                
+
+                            }
+                            
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        @*<div>
+                <input type="button" data-toggle="modal" data-target="#taskModal" class="btn btn-primary" value="Ajouter un programme" @onclick="(() => InitializeTaskObject())" />
+            </div>*@
+        @*}*@
+        @*<h2><button class="btn btn-success" @onclick="AddNewUser">Ajouter un Cheval</button></h2>*@
+        @*}
+            else
+            {
+            <p>You're not signed in as a user in @ADMINISTRATION_ROLE.</p>
+            }*@
+    </Authorized>
+    <NotAuthorized>
+        <p>You're not loggged in.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+
+
+@code {
+
+    List<AjoutPlanningReprisesModel> programsList;
+    List<ValidationPlanningRepriseModel> programsList_v;
+    List<AjoutPlanningReprisesModel> ColprogramsList;
+    AjoutPlanningReprisesModel taskObject = new AjoutPlanningReprisesModel();
+    ValidationPlanningRepriseModel taskObjectValidation = new ValidationPlanningRepriseModel();
+    string customHeader = string.Empty;
+    public string GetMonitorID;    
+
+    protected override async Task OnInitializedAsync()
+    {
+        programsList = await ajoutProgrammeService.Get();
+        programsList_v = await validationProgrammeService.Get();
+        GetMonitorID = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+    }
+
+    private void InitializeTaskObject()
+    {
+        taskObject = new AjoutPlanningReprisesModel();
+        customHeader = "Réserver un programme";
+    }
+
+    private async void DataChanged()
+    {
+        programsList = await ajoutProgrammeService.Get();
+        StateHasChanged();
+    }      
+        
+
+}
+

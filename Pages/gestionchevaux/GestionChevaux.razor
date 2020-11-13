@@ -1,0 +1,122 @@
+﻿@page "/gestionchevaux"
+@attribute [Authorize(Roles = "SuperAdmin, Admin, Moniteur")]
+
+@using GestionChevauxBlazor.Services;
+@using GestionChevauxBlazor.Models;
+@inject IAjoutChevauxService ajoutChevauxService
+@inject IJSRuntime jsRuntime
+
+<h1>Liste des chevaux disponibles</h1>
+
+<AuthorizeView>
+    <Authorized>
+        @*@if (@context.User.IsInRole(ADMINISTRATION_ROLE))
+            {*@
+        @if (chevauxList == null)
+        {
+            <p><em>Chargement...</em></p>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Nom du cheval</th>
+                        <th>Pays</th>
+                        <th>Age</th>
+                        <th>Disponible</th>
+                        <th>Modifier</th>
+                        <th>Supprimer</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var chevauxListItem in chevauxList)
+                    {
+                        <tr>
+                            <td>@chevauxListItem.HorseName</td>
+                            <td>@chevauxListItem.Country</td>
+                            <td>@chevauxListItem.Age</td>
+                            @if (@chevauxListItem.Available == true)
+                            {
+                                <td>Oui</td>
+
+                            }
+                            else
+                            {
+                                <td>Non</td>
+
+                            }
+                            @*<td>@chevauxListItem.Available</td>*@
+                            @*<td><input type="button" class="btn btn-primary" value="Modifier" /></td>*@
+                            <td><input type="button" class="btn btn-primary" @onclick="(() => PrepareForEdit(chevauxListItem))" data-toggle="modal" data-target="#taskModal" value="Modifier" /></td>
+                            <td><input type="button" class="btn btn-danger" @onclick="(() => PrepareForDelete(chevauxListItem))" data-toggle="modal" data-target="#confirmDeleteModal" value="Supprimer" /></td>
+                            @*<td><input type="button" class="btn btn-danger" value="Supprimer" /></td>*@
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        <div>
+            <input type="button" data-toggle="modal" data-target="#taskModal" class="btn btn-primary" value="Ajouter un cheval" @onclick="(() => InitializeTaskObject())" />
+        </div>
+        @*}*@
+        @*<h2><button class="btn btn-success" @onclick="AddNewUser">Ajouter un Cheval</button></h2>*@
+        @*}
+            else
+            {
+            <p>You're not signed in as a user in @ADMINISTRATION_ROLE.</p>
+            }*@
+    </Authorized>
+    <NotAuthorized>
+        <p>You're not loggged in.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+
+<ConfirmDialogGestionChevaux OnClick="@Delete" />
+<GestionChevauxDetail TaskObject=taskObject DataChanged="@DataChanged">
+    <CustomHeader>@customHeader</CustomHeader>
+</GestionChevauxDetail>
+
+@code {
+
+    List<AjoutChevauxModel> chevauxList;
+    AjoutChevauxModel taskObject = new AjoutChevauxModel();
+    string customHeader = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        chevauxList = await ajoutChevauxService.Get();
+    }
+
+    private void InitializeTaskObject()
+    {
+        taskObject = new AjoutChevauxModel();
+        customHeader = "Ajouter un cheval";
+    }
+
+    private async void DataChanged()
+    {
+        chevauxList = await ajoutChevauxService.Get();
+        StateHasChanged();
+    }
+
+    private void PrepareForEdit(AjoutChevauxModel task)
+    {
+        customHeader = "Modifier le cheval";
+        taskObject = task;
+    }
+
+    private void PrepareForDelete(AjoutChevauxModel task)
+    {
+        taskObject = task;
+    }
+
+    private async Task Delete()
+    {
+        var task = await ajoutChevauxService.Delete(taskObject.IdCheval);
+        await jsRuntime.InvokeAsync<object>("CloseModal", "confirmDeleteModal");
+        chevauxList = await ajoutChevauxService.Get();
+        taskObject = new AjoutChevauxModel();
+    }
+}
